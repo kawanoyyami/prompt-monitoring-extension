@@ -130,10 +130,10 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   }
   
   if (message.type === 'CLEAR_HISTORY') {
-    console.log('[Service Worker] Clearing all issues');
+    console.log('[Service Worker] Clearing all issues and dismissed emails');
     
-    chrome.storage.local.set({ issues: [] }, () => {
-      console.log('[Service Worker] All issues cleared');
+    chrome.storage.local.set({ issues: [], dismissedEmails: {} }, () => {
+      console.log('[Service Worker] All issues and dismissals cleared');
       if (sendResponse) {
         sendResponse({ success: true });
       }
