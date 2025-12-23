@@ -13,7 +13,6 @@ A browser extension that monitors ChatGPT prompts for email addresses, automatic
 - [Testing](#testing)
 - [Tech Stack](#tech-stack)
 - [Development](#development)
-- [Project Structure](#project-structure)
 
 ## Features
 
@@ -412,32 +411,4 @@ npm run type-check      # Run TypeScript type checking
 For active development, use:
 ```bash
 npm run dev:chrome    # Auto-rebuild on file changes
-```
-
-## Project Structure
-
-```
-prompt-monitoring-extension/
-├── public/
-│   ├── manifest.chrome.json    # Chrome/Edge/Brave/Opera manifest
-│   ├── manifest.firefox.json   # Firefox manifest  
-│   └── popup.html              # Popup HTML template
-├── src/
-│   ├── background/
-│   │   └── service-worker.ts   # Background service worker
-│   ├── content/
-│   │   ├── content-script.ts   # Content script (isolated world)
-│   │   └── injected-script.ts  # Injected script (main world)
-│   ├── popup/
-│   │   ├── components/         # React components
-│   │   ├── context/            # React Context
-│   │   ├── App.tsx             # Main app component
-│   │   ├── App.css             # Global styles
-│   │   ├── index.tsx           # Entry point
-│   │   └── theme.ts            # Material-UI theme
-│   ├── types/                  # TypeScript interfaces
-│   ├── constants/              # Application constants
-│   └── utils/                  # Utility functions
-├── dist-chrome/                # Chrome build output
-└── dist-firefox/               # Firefox build output
 ```
