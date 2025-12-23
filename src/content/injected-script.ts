@@ -19,7 +19,7 @@
       urlString = String(url);
     }
     
-    const isImportant = urlString.includes('backend-api') && urlString.includes('conversation');
+      const isImportant = (urlString.includes('backend-api') || urlString.includes('backend-anon')) && urlString.includes('conversation');
     
     if (isImportant) {
       console.log(`[Injected] FETCH #${fetchCount}:`, urlString.substring(0, 150));

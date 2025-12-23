@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import browser from 'webextension-polyfill';
 
 interface EmailIssue {
   id: string;
@@ -39,24 +40,24 @@ export const IssuesProvider: React.FC<IssuesProviderProps> = ({ children }) => {
   useEffect(() => {
     loadIssues();
 
-    const listener = (changes: { [key: string]: chrome.storage.StorageChange }, areaName: string) => {
+    const listener = (changes: any, areaName: string) => {
       if (areaName === 'local' && changes.issues) {
         console.log('[Context] Storage changed, updating issues');
         setIssues(changes.issues.newValue || []);
       }
     };
 
-    chrome.storage.onChanged.addListener(listener);
+    browser.storage.onChanged.addListener(listener);
 
     return () => {
-      chrome.storage.onChanged.removeListener(listener);
+      browser.storage.onChanged.removeListener(listener);
     };
   }, []);
 
   const loadIssues = () => {
     console.log('[Context] Loading issues from storage');
-    chrome.storage.local.get(['issues'], (result) => {
-      const loadedIssues = result.issues || [];
+    browser.storage.local.get(['issues']).then((result) => {
+      const loadedIssues = (result.issues as EmailIssue[]) || [];
       console.log('[Context] Loaded issues:', loadedIssues.length);
       setIssues(loadedIssues);
       setLoading(false);
@@ -65,43 +66,34 @@ export const IssuesProvider: React.FC<IssuesProviderProps> = ({ children }) => {
 
   const dismissIssue = (issueId: string) => {
     console.log('[Context] Dismissing issue:', issueId);
-    chrome.runtime.sendMessage(
-      {
-        type: 'DISMISS_ISSUE',
-        issueId: issueId,
-      },
-      (response) => {
-        console.log('[Context] Dismiss response:', response);
-        loadIssues();
-      }
-    );
+    browser.runtime.sendMessage({
+      type: 'DISMISS_ISSUE',
+      issueId: issueId,
+    }).then((response) => {
+      console.log('[Context] Dismiss response:', response);
+      loadIssues();
+    });
   };
 
   const dismissEmail = (email: string) => {
     console.log('[Context] Dismissing all instances of email:', email);
-    chrome.runtime.sendMessage(
-      {
-        type: 'DISMISS_EMAIL',
-        email: email,
-      },
-      (response) => {
-        console.log('[Context] Dismiss email response:', response);
-        loadIssues();
-      }
-    );
+    browser.runtime.sendMessage({
+      type: 'DISMISS_EMAIL',
+      email: email,
+    }).then((response) => {
+      console.log('[Context] Dismiss email response:', response);
+      loadIssues();
+    });
   };
 
   const clearHistory = () => {
     console.log('[Context] Clearing all history');
-    chrome.runtime.sendMessage(
-      {
-        type: 'CLEAR_HISTORY',
-      },
-      (response) => {
-        console.log('[Context] Clear history response:', response);
-        loadIssues();
-      }
-    );
+    browser.runtime.sendMessage({
+      type: 'CLEAR_HISTORY',
+    }).then((response) => {
+      console.log('[Context] Clear history response:', response);
+      loadIssues();
+    });
   };
 
   const activeIssues = issues.filter((issue) => !issue.dismissed);

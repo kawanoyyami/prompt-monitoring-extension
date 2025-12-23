@@ -1,3 +1,5 @@
+import browser from 'webextension-polyfill';
+
 console.log('[Service Worker] Started');
 
 interface EmailIssue {
@@ -8,24 +10,33 @@ interface EmailIssue {
   dismissedUntil?: number;
 }
 
-chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+interface MessageData {
+  type: string;
+  emails?: string[];
+  timestamp?: number;
+  issueId?: string;
+  email?: string;
+}
+
+browser.runtime.onMessage.addListener((message: any, sender, sendResponse) => {
   console.log('[Service Worker] Message received:', message);
   
   if (message.type === 'EMAIL_DETECTED') {
-    const { emails, timestamp } = message;
+    const emails = message.emails || [];
+    const timestamp = message.timestamp || Date.now();
     
     console.log('[Service Worker] Processing emails:', emails);
     
-    chrome.storage.local.get(['issues', 'dismissedEmails'], (result) => {
-      const existingIssues: EmailIssue[] = result.issues || [];
-      const dismissedEmails: Record<string, number> = result.dismissedEmails || {};
+    browser.storage.local.get(['issues', 'dismissedEmails']).then((result) => {
+      const existingIssues: EmailIssue[] = (result.issues as EmailIssue[]) || [];
+      const dismissedEmails: Record<string, number> = (result.dismissedEmails as Record<string, number>) || {};
       const now = Date.now();
       
       console.log('[Service Worker] Existing issues:', existingIssues.length);
       
       let hasActiveEmail = false;
       
-      emails.forEach((email: string) => {
+      (emails || []).forEach((email: string) => {
         const dismissedUntil = dismissedEmails[email];
         const isDismissed = dismissedUntil && dismissedUntil > now;
         
@@ -45,12 +56,12 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         console.log('[Service Worker] Added issue:', newIssue, isDismissed ? '(auto-dismissed)' : '');
       });
       
-      chrome.storage.local.set({ issues: existingIssues }, () => {
+      browser.storage.local.set({ issues: existingIssues }).then(() => {
         console.log('[Service Worker] Issues saved to storage. Total:', existingIssues.length);
         
         if (hasActiveEmail) {
           try {
-            chrome.action.openPopup();
+            browser.action.openPopup();
             console.log('[Service Worker] Popup opened');
           } catch (error) {
             console.log('[Service Worker] Could not auto-open popup:', error);
@@ -67,12 +78,12 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   }
   
   if (message.type === 'DISMISS_ISSUE') {
-    const { issueId } = message;
+    const issueId = message.issueId;
     
     console.log('[Service Worker] Dismissing issue:', issueId);
     
-    chrome.storage.local.get(['issues'], (result) => {
-      const issues: EmailIssue[] = result.issues || [];
+    browser.storage.local.get(['issues']).then((result) => {
+      const issues: EmailIssue[] = (result.issues as EmailIssue[]) || [];
       
       const updatedIssues = issues.map(issue => {
         if (issue.id === issueId) {
@@ -85,7 +96,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         return issue;
       });
       
-      chrome.storage.local.set({ issues: updatedIssues }, () => {
+      browser.storage.local.set({ issues: updatedIssues }).then(() => {
         console.log('[Service Worker] Issue dismissed:', issueId);
         if (sendResponse) {
           sendResponse({ success: true });
@@ -97,13 +108,13 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   }
 
   if (message.type === 'DISMISS_EMAIL') {
-    const { email } = message;
+    const email = message.email;
     
     console.log('[Service Worker] Dismissing all instances of email:', email);
     
-    chrome.storage.local.get(['issues', 'dismissedEmails'], (result) => {
-      const issues: EmailIssue[] = result.issues || [];
-      const dismissedEmails: Record<string, number> = result.dismissedEmails || {};
+    browser.storage.local.get(['issues', 'dismissedEmails']).then((result) => {
+      const issues: EmailIssue[] = (result.issues as EmailIssue[]) || [];
+      const dismissedEmails: Record<string, number> = (result.dismissedEmails as Record<string, number>) || {};
       
       dismissedEmails[email] = Date.now() + (24 * 60 * 60 * 1000);
       
@@ -118,7 +129,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         return issue;
       });
       
-      chrome.storage.local.set({ issues: updatedIssues, dismissedEmails }, () => {
+      browser.storage.local.set({ issues: updatedIssues, dismissedEmails }).then(() => {
         console.log('[Service Worker] All instances of email dismissed:', email);
         if (sendResponse) {
           sendResponse({ success: true });
@@ -132,7 +143,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message.type === 'CLEAR_HISTORY') {
     console.log('[Service Worker] Clearing all issues and dismissed emails');
     
-    chrome.storage.local.set({ issues: [], dismissedEmails: {} }, () => {
+    browser.storage.local.set({ issues: [], dismissedEmails: {} }).then(() => {
       console.log('[Service Worker] All issues and dismissals cleared');
       if (sendResponse) {
         sendResponse({ success: true });
@@ -141,10 +152,12 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     
     return true;
   }
+  
+  return true;
 });
 
-chrome.storage.local.get(['issues'], (result) => {
-  const issues: EmailIssue[] = result.issues || [];
+browser.storage.local.get(['issues']).then((result) => {
+  const issues: EmailIssue[] = (result.issues as EmailIssue[]) || [];
   const now = Date.now();
   
   const cleanedIssues = issues.map(issue => {
@@ -163,7 +176,7 @@ chrome.storage.local.get(['issues'], (result) => {
   );
   
   if (hasChanges) {
-    chrome.storage.local.set({ issues: cleanedIssues }, () => {
+    browser.storage.local.set({ issues: cleanedIssues }).then(() => {
       console.log('[Service Worker] Cleaned up expired dismissals');
     });
   }
