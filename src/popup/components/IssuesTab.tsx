@@ -2,7 +2,6 @@ import React from 'react';
 import {
   Box,
   Typography,
-  Alert,
   Card,
   CardContent,
   Chip,
@@ -37,14 +36,14 @@ const IssuesTab: React.FC<IssuesTabProps> = ({ issues, onDismiss, onDismissEmail
   const emailAddresses = Object.keys(groupedIssues);
   const totalDetections = issues.length;
 
-  return (
-    <Box sx={{ p: 2 }}>
-      {emailAddresses.length > 0 && (
-        <Alert severity="warning" sx={{ mb: 2 }}>
-          {emailAddresses.length} unique email(s) detected ({totalDetections} total detection{totalDetections !== 1 ? 's' : ''})
-        </Alert>
-      )}
+  const sortedEmailAddresses = emailAddresses.sort((a, b) => {
+    const latestA = Math.max(...groupedIssues[a].map(i => i.timestamp));
+    const latestB = Math.max(...groupedIssues[b].map(i => i.timestamp));
+    return latestB - latestA;
+  });
 
+  return (
+    <Box>
       <Typography variant="h6" gutterBottom>
         Current Issues
       </Typography>
@@ -54,15 +53,15 @@ const IssuesTab: React.FC<IssuesTabProps> = ({ issues, onDismiss, onDismissEmail
           No active issues. All detected emails have been dismissed.
         </Typography>
       ) : (
-        emailAddresses.map((email) => {
+        sortedEmailAddresses.map((email) => {
           const emailIssues = groupedIssues[email];
           const latestIssue = emailIssues[emailIssues.length - 1];
           
           return (
             <Card key={email} sx={{ mb: 2, bgcolor: '#fff3e0' }}>
               <CardContent>
-                <Box display="flex" justifyContent="space-between" alignItems="center">
-                  <Box>
+                <Box display="flex" justifyContent="space-between" alignItems="center" gap={1}>
+                  <Box sx={{ flexGrow: 1, minWidth: 0 }}>
                     <Typography variant="body2" color="text.secondary">
                       Detected Email
                     </Typography>

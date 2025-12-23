@@ -40,8 +40,10 @@ const HistoryTab: React.FC<HistoryTabProps> = ({ issues, onClearHistory, formatT
     setConfirmOpen(false);
   };
 
+  const sortedIssues = [...issues].sort((a, b) => b.timestamp - a.timestamp);
+
   return (
-    <Box sx={{ p: 2 }}>
+    <Box>
       <Typography variant="h6" gutterBottom>
         Detection History
       </Typography>
@@ -53,7 +55,7 @@ const HistoryTab: React.FC<HistoryTabProps> = ({ issues, onClearHistory, formatT
       ) : (
         <>
           <List>
-            {issues.map((issue) => (
+            {sortedIssues.map((issue) => (
               <ListItem
                 key={issue.id}
                 sx={{
@@ -64,7 +66,7 @@ const HistoryTab: React.FC<HistoryTabProps> = ({ issues, onClearHistory, formatT
               >
                 <ListItemText
                   primary={
-                    <Box display="flex" alignItems="center" gap={1}>
+                    <Box display="flex" alignItems="center" gap={1} flexWrap="wrap">
                       <Typography variant="body2">{issue.email}</Typography>
                       {issue.dismissed && <Chip label="Dismissed" size="small" color="default" />}
                     </Box>

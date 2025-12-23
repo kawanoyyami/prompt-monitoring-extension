@@ -33,26 +33,27 @@ const App: React.FC = () => {
 
   return (
     <ThemeProvider theme={theme}>
-      <Box sx={{ width: 400, minHeight: 500, bgcolor: 'background.default' }}>
+      <Box sx={{ width: 400, maxHeight: 600, bgcolor: 'background.default', display: 'flex', flexDirection: 'column' }}>
         <Header />
         <TabNavigation activeTab={activeTab} onTabChange={(e, val) => setActiveTab(val)} />
 
-        <TabPanel value={activeTab} index={0}>
-          <IssuesTab
-            issues={activeIssues}
-            onDismiss={handleDismiss}
-            onDismissEmail={handleDismissEmail}
-            formatTimestamp={formatTimestamp}
-          />
-        </TabPanel>
-
-        <TabPanel value={activeTab} index={1}>
-          <HistoryTab
-            issues={issues}
-            onClearHistory={handleClearHistory}
-            formatTimestamp={formatTimestamp}
-          />
-        </TabPanel>
+        <Box sx={{ p: 2, overflowY: 'auto', flexGrow: 1 }}>
+          {activeTab === 0 && (
+            <IssuesTab
+              issues={activeIssues}
+              onDismiss={handleDismiss}
+              onDismissEmail={handleDismissEmail}
+              formatTimestamp={formatTimestamp}
+            />
+          )}
+          {activeTab === 1 && (
+            <HistoryTab
+              issues={issues}
+              onClearHistory={handleClearHistory}
+              formatTimestamp={formatTimestamp}
+            />
+          )}
+        </Box>
       </Box>
     </ThemeProvider>
   );

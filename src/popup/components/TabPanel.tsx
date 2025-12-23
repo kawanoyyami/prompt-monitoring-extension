@@ -8,10 +8,23 @@ interface TabPanelProps {
 }
 
 const TabPanel: React.FC<TabPanelProps> = ({ children, value, index, ...other }) => {
+  const isActive = value === index;
+  
   return (
-    <div role="tabpanel" hidden={value !== index} id={`tabpanel-${index}`} {...other}>
-      {value === index && <Box>{children}</Box>}
-    </div>
+    <Box
+      role="tabpanel"
+      id={`tabpanel-${index}`}
+      sx={{
+        height: '100%',
+        width: '100%',
+        display: isActive ? 'flex' : 'none',
+        flexDirection: 'column',
+        overflow: 'hidden'
+      }}
+      {...other}
+    >
+      {children}
+    </Box>
   );
 };
 

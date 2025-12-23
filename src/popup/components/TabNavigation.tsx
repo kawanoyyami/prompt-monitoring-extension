@@ -17,8 +17,8 @@ const TabNavigation: React.FC<TabNavigationProps> = ({ activeTab, onTabChange })
         textColor="primary"
         indicatorColor="primary"
       >
-        <Tab icon={<EmailIcon />} label="Issues Found" />
-        <Tab icon={<HistoryIcon />} label="History" />
+        <Tab icon={<EmailIcon />} label="Issues Found" iconPosition="start" />
+        <Tab icon={<HistoryIcon />} label="History" iconPosition="start" />
       </Tabs>
     </Box>
   );

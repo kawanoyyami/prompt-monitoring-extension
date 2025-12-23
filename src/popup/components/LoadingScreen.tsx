@@ -8,7 +8,7 @@ const LoadingScreen: React.FC = () => {
       <Box
         sx={{
           width: 400,
-          minHeight: 500,
+          height: 600,
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
