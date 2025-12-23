@@ -1,0 +1,9 @@
+{
+  "manifest_version": 3,
+  "name": "Prompt Monitoring Extension",
+  "version": "1.0.0",
+  "description": "Monitors ChatGPT prompts for email addresses",
+  "action": {
+    "default_popup": "popup.html"
+  }
+}
