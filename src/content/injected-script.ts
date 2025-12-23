@@ -1,5 +1,8 @@
 (function () {
   const EMAIL_REGEX = /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g;
+
+  // Runs in page's main world to intercept fetch requests
+  // See README.md "Implementation Details" section for why this approach is necessary
   const originalFetch = window.fetch;
 
   window.fetch = async function (url: RequestInfo | URL, options?: RequestInit): Promise<Response> {

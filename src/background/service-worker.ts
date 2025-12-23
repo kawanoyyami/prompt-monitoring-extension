@@ -42,6 +42,8 @@ async function handleEmailDetected(message: MessageData, sendResponse: (response
     const isDismissed = dismissedUntil && dismissedUntil > now;
 
     const newIssue: EmailIssue = {
+      // Generate unique ID, timestamp + random string, like "1234567890-k3j5h2m9p"
+      // Good enough for local storage, no need for external UUID library
       id: `${timestamp}-${Math.random().toString(36).substr(2, 9)}`,
       email,
       timestamp,
@@ -63,7 +65,7 @@ async function handleEmailDetected(message: MessageData, sendResponse: (response
       await browser.action.openPopup();
     } catch (error) {
       // Popup can't be opened automatically in Firefox
-      //TODO: add a error catch 
+      console.warn(error);
     }
   }
 

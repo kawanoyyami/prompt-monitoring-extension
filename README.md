@@ -2,6 +2,19 @@
 
 A browser extension that monitors ChatGPT prompts for email addresses, automatically anonymizes them, and provides a comprehensive tracking interface.
 
+## Table of Contents
+
+- [Features](#features)
+- [Browser Compatibility](#browser-compatibility)
+- [Technical Implementation](#technical-implementation)
+- [Implementation Details](#implementation-details)
+- [User Interaction Flows](#user-interaction-flows)
+- [Installation](#installation)
+- [Testing](#testing)
+- [Tech Stack](#tech-stack)
+- [Development](#development)
+- [Project Structure](#project-structure)
+
 ## Features
 
 ### Core Functionality
@@ -45,64 +58,6 @@ Firefox MV3 support for `service_worker` is still experimental. Current Firefox 
   - Incomplete Manifest V3 implementation  
   - Xcode conversion & macOS development environment required
   - Different service worker architecture
-
-## Installation
-
-### Prerequisites
-- Node.js (v14 or higher)
-- npm
-- One of the supported browsers (Chrome, Edge, Firefox, Brave, Opera)
-
-### Build Instructions
-
-1. **Clone or extract the project**
-2. **Install dependencies**
-   ```bash
-   npm install
-   ```
-
-3. **Build the extension**
-   
-   **Build for all browsers (recommended):**
-   ```bash
-   npm run build
-   ```
-   Creates two folders:
-   - `dist-chrome/` - For Chrome/Edge/Brave/Opera
-   - `dist-firefox/` - For Firefox
-   
-   **Or build individually:**
-   ```bash
-   npm run build:chrome    # Creates dist-chrome/
-   npm run build:firefox   # Creates dist-firefox/
-   ```
-   
-   **Note:** Firefox and Chrome require different manifest configurations:
-   - Chrome uses `background.service_worker` (MV3)
-   - Firefox uses `background.scripts` (MV3 with compatibility)
-
-4. **Load the extension**
-
-   **For Chrome/Edge/Brave/Opera:**
-   - Open browser and navigate to:
-     - Chrome: `chrome://extensions/`
-     - Edge: `edge://extensions/`
-     - Brave: `brave://extensions/`
-     - Opera: `opera://extensions/`
-   - Enable "Developer mode" (top right toggle)
-   - Load unpacked
-   - Select the `dist-chrome/` folder
-
-   **For Firefox:**
-   - Open Firefox and navigate to `about:debugging#/runtime/this-firefox`
-   - Load Temporary Add-on
-   - Navigate to `dist-firefox/` folder and select `manifest.json`
-
-5. **Test the extension**
-   - Navigate to ChatGPT
-   - Send a message containing an email address (e.g., `test@example.com`)
-   - The extension popup should open automatically (Chrome/Edge) or can be clicked manually (Firefox)
-   - Check that the email was anonymized in the actual request
 
 ## Technical Implementation
 
@@ -213,6 +168,68 @@ sequenceDiagram
 
 This approach is **not a workaround**—it's the **recommended pattern** for extensions that need to modify network requests in Manifest V3.
 
+## Implementation Details
+
+### Is it safe to override window.fetch?
+
+Yes, it's completely safe. The extension doesn't break anything, it saves a reference to the original `fetch` function and calls it after modifications. Think of it like middleware, the extension inspects the request, makes changes if needed, then passes it to the real `fetch`. The page functions normally, with sanitized data.
+
+This pattern is used by countless browser extensions, developer tools, and monitoring libraries. Chrome's architecture expects this approach. In fact, with Manifest V3 restrictions, it's the **main** way to modify request bodies before they leave the browser.
+
+### injected-script.ts
+
+This script runs directly in the page context (same as ChatGPT's own JavaScript). It overrides `window.fetch` to intercept requests before they're sent.
+
+Here's what happens:
+1. Save the original `fetch` function
+2. Replace `window.fetch` with a custom version
+3. When ChatGPT tries to send a message, it catches it
+4. Check if it's a conversation request (ignores everything else)
+5. Scan the request body for emails with regex
+6. Replace any emails with `[EMAIL_ADDRESS]`
+7. Fire a custom event to notify the content script
+8. Call the **original** fetch with the anonymized body
+
+The important part, it always calls `originalFetch.call(this, url, options)` with the modified data. ChatGPT gets its response, the page works normally, but the server never sees the real email.
+
+Why does this need to run in the page context? Because content scripts run in an "isolated world", they can see the DOM but can't touch page variables like `window.fetch`. The script needs to be in the same JavaScript context as the page to override its functions.
+
+### content-script.ts
+
+This is the messenger. It injects our script into the page and listens for the `emailDetected` event.
+
+The flow is simple:
+1. Create a `<script>` tag pointing to `injected-script.js`
+2. Inject it into the page's DOM (this makes it run in the main world)
+3. Wait for custom events from that script
+4. Forward any detected emails to the service worker
+
+Why is this middleman needed? The injected script can override `fetch` but can't access extension APIs like `chrome.storage` or `chrome.runtime`. The content script can access both the page and extension APIs, so it bridges the gap.
+
+### service-worker.ts
+
+This is where all the business logic lives. It runs in the background and handles four types of messages:
+
+**EMAIL_DETECTED**: When the content script sends detected emails, they're saved to `chrome.storage.local`. Before saving, the extension checks if this email was recently dismissed - if it was, the new issue is marked as dismissed too (prevents spam alerts). If it's a new active issue, the extension tries to open the popup automatically (this works in Chrome, not Firefox).
+
+**DISMISS_ISSUE**: Marks a specific issue as dismissed for 24 hours. Just updates the `dismissed` flag and sets an expiry timestamp.
+
+**DISMISS_EMAIL**: More aggressive - dismisses ALL issues for a specific email address, not just one. Also adds the email to a global `dismissedEmails` list, so future detections are auto-dismissed. Useful when you know you'll be testing with the same email repeatedly.
+
+**CLEAR_HISTORY**: Nukes everything. Removes all issues and clears the dismissed list.
+
+Data is stored in this structure:
+```javascript
+{
+  issues: [...],              // Array of all detected emails
+  dismissedEmails: {          // Map of email -> expiry timestamp
+    "test@example.com": 1234567890
+  }
+}
+```
+
+On startup, a cleanup task runs that checks for expired dismissals (older than 24h) and removes them. This keeps the storage from growing indefinitely.
+
 ## User Interaction Flows
 
 ### Dismiss Email Flow
@@ -262,6 +279,64 @@ sequenceDiagram
     Popup->>Popup: Clear UI
     Popup->>User: Show empty state
 ```
+
+## Installation
+
+### Prerequisites
+- Node.js (v14 or higher)
+- npm
+- One of the supported browsers (Chrome, Edge, Firefox, Brave, Opera)
+
+### Build Instructions
+
+1. **Clone or extract the project**
+2. **Install dependencies**
+   ```bash
+   npm install
+   ```
+
+3. **Build the extension**
+   
+   **Build for all browsers (recommended):**
+   ```bash
+   npm run build
+   ```
+   Creates two folders:
+   - `dist-chrome/` - For Chrome/Edge/Brave/Opera
+   - `dist-firefox/` - For Firefox
+   
+   **Or build individually:**
+   ```bash
+   npm run build:chrome    # Creates dist-chrome/
+   npm run build:firefox   # Creates dist-firefox/
+   ```
+   
+   **Note:** Firefox and Chrome require different manifest configurations:
+   - Chrome uses `background.service_worker` (MV3)
+   - Firefox uses `background.scripts` (MV3 with compatibility)
+
+4. **Load the extension**
+
+   **For Chrome/Edge/Brave/Opera:**
+   - Open browser and navigate to:
+     - Chrome: `chrome://extensions/`
+     - Edge: `edge://extensions/`
+     - Brave: `brave://extensions/`
+     - Opera: `opera://extensions/`
+   - Enable "Developer mode" (top right toggle)
+   - Load unpacked
+   - Select the `dist-chrome/` folder
+
+   **For Firefox:**
+   - Open Firefox and navigate to `about:debugging#/runtime/this-firefox`
+   - Load Temporary Add-on
+   - Navigate to `dist-firefox/` folder and select `manifest.json`
+
+5. **Test the extension**
+   - Navigate to ChatGPT
+   - Send a message containing an email address (e.g., `test@example.com`)
+   - The extension popup should open automatically (Chrome/Edge) or can be clicked manually (Firefox)
+   - Check that the email was anonymized in the actual request
 
 ## Testing
 
