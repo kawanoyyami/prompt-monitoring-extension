@@ -123,39 +123,46 @@ async function handleClearHistory(sendResponse: (response: any) => void) {
   sendResponse({ success: true });
 }
 
-browser.storage.local.get(['issues', 'dismissedEmails']).then((result) => {
-  const issues: EmailIssue[] = (result.issues as EmailIssue[]) || [];
-  const dismissedEmails: Record<string, number> = (result.dismissedEmails as Record<string, number>) || {};
-  const now = Date.now();
+async function cleanupExpiredDismissals() {
+  try {
+    const result = await browser.storage.local.get(['issues', 'dismissedEmails']);
+    const issues: EmailIssue[] = (result.issues as EmailIssue[]) || [];
+    const dismissedEmails: Record<string, number> = (result.dismissedEmails as Record<string, number>) || {};
+    const now = Date.now();
 
-  const cleanedIssues = issues.map((issue) => {
-    if (issue.dismissed && issue.dismissedUntil && issue.dismissedUntil < now) {
-      return {
-        ...issue,
-        dismissed: false,
-        dismissedUntil: undefined,
-      };
+    const cleanedIssues = issues.map((issue) => {
+      if (issue.dismissed && issue.dismissedUntil && issue.dismissedUntil < now) {
+        return {
+          ...issue,
+          dismissed: false,
+          dismissedUntil: undefined,
+        };
+      }
+      return issue;
+    });
+
+    const cleanedDismissedEmails: Record<string, number> = {};
+    for (const email in dismissedEmails) {
+      if (dismissedEmails[email] > now) {
+        cleanedDismissedEmails[email] = dismissedEmails[email];
+      }
     }
-    return issue;
-  });
 
-  const cleanedDismissedEmails: Record<string, number> = {};
-  for (const email in dismissedEmails) {
-    if (dismissedEmails[email] > now) {
-      cleanedDismissedEmails[email] = dismissedEmails[email];
-    }
-  }
-
-  const hasIssuesChanges = cleanedIssues.some(
-    (issue, index) => issue.dismissed !== issues[index].dismissed
-  );
-  const hasDismissedEmailsChanges =
-    Object.keys(cleanedDismissedEmails).length !== Object.keys(dismissedEmails).length ||
-    Object.keys(cleanedDismissedEmails).some(
-      (email) => cleanedDismissedEmails[email] !== dismissedEmails[email]
+    const hasIssuesChanges = cleanedIssues.some(
+      (issue, index) => issue.dismissed !== issues[index].dismissed
     );
+    const hasDismissedEmailsChanges =
+      Object.keys(cleanedDismissedEmails).length !== Object.keys(dismissedEmails).length ||
+      Object.keys(cleanedDismissedEmails).some(
+        (email) => cleanedDismissedEmails[email] !== dismissedEmails[email]
+      );
 
-  if (hasIssuesChanges || hasDismissedEmailsChanges) {
-    browser.storage.local.set({ issues: cleanedIssues, dismissedEmails: cleanedDismissedEmails });
+    if (hasIssuesChanges || hasDismissedEmailsChanges) {
+      await browser.storage.local.set({ issues: cleanedIssues, dismissedEmails: cleanedDismissedEmails });
+    }
+  } catch (error) {
+    console.error('[Service Worker] Failed to cleanup expired dismissals:', error);
   }
-});
+}
+
+cleanupExpiredDismissals();

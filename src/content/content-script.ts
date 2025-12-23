@@ -4,6 +4,7 @@ import { MESSAGE_TYPES } from '../constants';
 window.addEventListener('emailDetected', ((event: CustomEvent) => {
   const { emails, timestamp } = event.detail;
 
+  // Fire-and-forget pattern with .catch() is simpler and more appropriate than async/await IIFE here
   browser.runtime
     .sendMessage({
       type: MESSAGE_TYPES.EMAIL_DETECTED,

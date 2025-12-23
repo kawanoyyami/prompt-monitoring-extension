@@ -7,10 +7,10 @@ interface IssuesContextType {
   issues: EmailIssue[];
   loading: boolean;
   activeIssues: EmailIssue[];
-  loadIssues: () => void;
-  dismissIssue: (issueId: string) => void;
-  dismissEmail: (email: string) => void;
-  clearHistory: () => void;
+  loadIssues: () => Promise<void>;
+  dismissIssue: (issueId: string) => Promise<void>;
+  dismissEmail: (email: string) => Promise<void>;
+  clearHistory: () => Promise<void>;
 }
 
 const IssuesContext = createContext<IssuesContextType | undefined>(undefined);
@@ -47,32 +47,51 @@ export const IssuesProvider: React.FC<IssuesProviderProps> = ({ children }) => {
     };
   }, []);
 
-  const loadIssues = () => {
-    browser.storage.local.get(['issues']).then((result) => {
+  const loadIssues = async () => {
+    try {
+      const result = await browser.storage.local.get(['issues']);
       const loadedIssues = (result.issues as EmailIssue[]) || [];
       setIssues(loadedIssues);
       setLoading(false);
-    });
+    } catch (error) {
+      console.error('[Popup] Failed to load issues:', error);
+      setLoading(false);
+    }
   };
 
-  const dismissIssue = (issueId: string) => {
-    browser.runtime.sendMessage({
-      type: MESSAGE_TYPES.DISMISS_ISSUE,
-      issueId,
-    }).then(() => loadIssues());
+  const dismissIssue = async (issueId: string) => {
+    try {
+      await browser.runtime.sendMessage({
+        type: MESSAGE_TYPES.DISMISS_ISSUE,
+        issueId,
+      });
+      await loadIssues();
+    } catch (error) {
+      console.error('[Popup] Failed to dismiss issue:', error);
+    }
   };
 
-  const dismissEmail = (email: string) => {
-    browser.runtime.sendMessage({
-      type: MESSAGE_TYPES.DISMISS_EMAIL,
-      email,
-    }).then(() => loadIssues());
+  const dismissEmail = async (email: string) => {
+    try {
+      await browser.runtime.sendMessage({
+        type: MESSAGE_TYPES.DISMISS_EMAIL,
+        email,
+      });
+      await loadIssues();
+    } catch (error) {
+      console.error('[Popup] Failed to dismiss email:', error);
+    }
   };
 
-  const clearHistory = () => {
-    browser.runtime.sendMessage({
-      type: MESSAGE_TYPES.CLEAR_HISTORY,
-    }).then(() => loadIssues());
+  const clearHistory = async () => {
+    try {
+      await browser.runtime.sendMessage({
+        type: MESSAGE_TYPES.CLEAR_HISTORY,
+      });
+      await loadIssues();
+    } catch (error) {
+      console.error('[Popup] Failed to clear history:', error);
+    }
   };
 
   const activeIssues = issues.filter((issue) => !issue.dismissed);

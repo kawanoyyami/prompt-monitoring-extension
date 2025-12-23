@@ -13,7 +13,7 @@ import type { EmailIssue } from '../../../types';
 
 interface HistoryTabProps {
   issues: EmailIssue[];
-  onClearHistory: () => void;
+  onClearHistory: () => Promise<void>;
   formatTimestamp: (timestamp: number) => string;
 }
 
@@ -24,8 +24,8 @@ const HistoryTab: React.FC<HistoryTabProps> = ({ issues, onClearHistory, formatT
     setConfirmOpen(true);
   };
 
-  const handleConfirm = () => {
-    onClearHistory();
+  const handleConfirm = async () => {
+    await onClearHistory();
     setConfirmOpen(false);
   };
 

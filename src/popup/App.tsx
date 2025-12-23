@@ -16,16 +16,16 @@ const App: React.FC = () => {
   const [activeTab, setActiveTab] = useState(0);
   const { issues, loading, activeIssues, dismissIssue, dismissEmail, clearHistory } = useIssues();
 
-  const handleDismiss = (issueId: string) => {
-    dismissIssue(issueId);
+  const handleDismiss = async (issueId: string) => {
+    await dismissIssue(issueId);
   };
 
-  const handleDismissEmail = (email: string) => {
-    dismissEmail(email);
+  const handleDismissEmail = async (email: string) => {
+    await dismissEmail(email);
   };
 
-  const handleClearHistory = () => {
-    clearHistory();
+  const handleClearHistory = async () => {
+    await clearHistory();
   };
 
   if (loading) {

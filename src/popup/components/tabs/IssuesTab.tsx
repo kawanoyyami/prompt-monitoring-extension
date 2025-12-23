@@ -12,8 +12,8 @@ import type { EmailIssue } from '../../../types';
 
 interface IssuesTabProps {
   issues: EmailIssue[];
-  onDismiss: (issueId: string) => void;
-  onDismissEmail: (email: string) => void;
+  onDismiss: (issueId: string) => Promise<void>;
+  onDismissEmail: (email: string) => Promise<void>;
   formatTimestamp: (timestamp: number) => string;
 }
 
