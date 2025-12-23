@@ -5,17 +5,15 @@
   // See README.md "Implementation Details" section for why this approach is necessary
   const originalFetch = window.fetch;
 
+  const getUrlString = (url: RequestInfo | URL): string => {
+    if (typeof url === 'string') return url;
+    if (url instanceof URL) return url.toString();
+    if ((url as any).url) return (url as any).url;
+    return String(url);
+  };
+
   window.fetch = async function (url: RequestInfo | URL, options?: RequestInit): Promise<Response> {
-    let urlString: string;
-    if (typeof url === 'string') {
-      urlString = url;
-    } else if (url instanceof URL) {
-      urlString = url.toString();
-    } else if ((url as any).url) {
-      urlString = (url as any).url;
-    } else {
-      urlString = String(url);
-    }
+    const urlString = getUrlString(url);
 
     const isChatGPTAPI =
       (urlString.includes('backend-api') || urlString.includes('backend-anon')) &&

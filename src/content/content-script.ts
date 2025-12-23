@@ -4,19 +4,15 @@ import { MESSAGE_TYPES } from '../constants';
 window.addEventListener('emailDetected', ((event: CustomEvent) => {
   const { emails, timestamp } = event.detail;
 
-  try {
-    browser.runtime
-      .sendMessage({
-        type: MESSAGE_TYPES.EMAIL_DETECTED,
-        emails,
-        timestamp,
-      })
-      .catch(() => {
-        console.warn('[Extension] Context invalidated. Please reload the page after updating the extension.');
-      });
-  } catch (error) {
-    console.warn('[Extension] Could not send message. Extension may have been updated.');
-  }
+  browser.runtime
+    .sendMessage({
+      type: MESSAGE_TYPES.EMAIL_DETECTED,
+      emails,
+      timestamp,
+    })
+    .catch(() => {
+      console.warn('[Extension] Context invalidated. Please reload the page after updating the extension.');
+    });
 }) as EventListener);
 
 function injectScript() {
