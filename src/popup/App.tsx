@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Box,
   AppBar,
@@ -17,6 +17,7 @@ import {
   Alert,
   ThemeProvider,
   createTheme,
+  CircularProgress,
 } from '@mui/material';
 import {
   Shield as ShieldIcon,
@@ -36,6 +37,14 @@ const theme = createTheme({
     },
   },
 });
+
+interface EmailIssue {
+  id: string;
+  email: string;
+  timestamp: number;
+  dismissed: boolean;
+  dismissedUntil?: number;
+}
 
 interface TabPanelProps {
   children?: React.ReactNode;
@@ -59,15 +68,86 @@ function TabPanel(props: TabPanelProps) {
 
 const App: React.FC = () => {
   const [activeTab, setActiveTab] = useState(0);
+  const [issues, setIssues] = useState<EmailIssue[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    loadIssues();
+
+    const listener = (changes: { [key: string]: chrome.storage.StorageChange }, areaName: string) => {
+      if (areaName === 'local' && changes.issues) {
+        console.log('[Popup] Storage changed, reloading issues');
+        setIssues(changes.issues.newValue || []);
+      }
+    };
+
+    chrome.storage.onChanged.addListener(listener);
+
+    return () => {
+      chrome.storage.onChanged.removeListener(listener);
+    };
+  }, []);
+
+  const loadIssues = () => {
+    chrome.storage.local.get(['issues'], (result) => {
+      const loadedIssues = result.issues || [];
+      console.log('[Popup] Loaded issues:', loadedIssues);
+      setIssues(loadedIssues);
+      setLoading(false);
+    });
+  };
 
   const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
     setActiveTab(newValue);
   };
 
-  const mockIssues = [
-    { id: 1, email: 'user@example.com', timestamp: new Date().toLocaleString() },
-    { id: 2, email: 'test@domain.com', timestamp: new Date().toLocaleString() },
-  ];
+  const handleDismiss = (issueId: string) => {
+    console.log('[Popup] Dismissing issue:', issueId);
+    chrome.runtime.sendMessage({
+      type: 'DISMISS_ISSUE',
+      issueId: issueId
+    }, (response) => {
+      console.log('[Popup] Dismiss response:', response);
+      loadIssues();
+    });
+  };
+
+  const handleClearHistory = () => {
+    if (window.confirm('Are you sure you want to clear all history?')) {
+      console.log('[Popup] Clearing history');
+      chrome.runtime.sendMessage({
+        type: 'CLEAR_HISTORY'
+      }, (response) => {
+        console.log('[Popup] Clear history response:', response);
+        loadIssues();
+      });
+    }
+  };
+
+  const formatTimestamp = (timestamp: number): string => {
+    const date = new Date(timestamp);
+    return date.toLocaleString('en-US', {
+      month: '2-digit',
+      day: '2-digit',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: true
+    });
+  };
+
+  const activeIssues = issues.filter(issue => !issue.dismissed);
+  const allIssues = issues;
+
+  if (loading) {
+    return (
+      <ThemeProvider theme={theme}>
+        <Box sx={{ width: 400, minHeight: 500, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <CircularProgress />
+        </Box>
+      </ThemeProvider>
+    );
+  }
 
   return (
     <ThemeProvider theme={theme}>
@@ -95,45 +175,54 @@ const App: React.FC = () => {
         </Box>
 
         <TabPanel value={activeTab} index={0}>
-          <Alert severity="success" sx={{ mb: 2 }}>
-            Extension is monitoring your prompts
+          <Alert severity={activeIssues.length > 0 ? 'warning' : 'success'} sx={{ mb: 2 }}>
+            {activeIssues.length > 0 
+              ? `${activeIssues.length} email(s) detected and anonymized`
+              : 'Extension is monitoring your prompts'}
           </Alert>
           
           <Typography variant="h6" gutterBottom>
             Current Issues
           </Typography>
           
-          <List>
-            {mockIssues.map((issue) => (
-              <Card key={issue.id} sx={{ mb: 1 }}>
-                <CardContent>
-                  <Box display="flex" justifyContent="space-between" alignItems="center">
-                    <Box>
-                      <Typography variant="body2" color="text.secondary">
-                        Detected Email
-                      </Typography>
-                      <Chip
-                        label={issue.email}
-                        color="warning"
+          {activeIssues.length === 0 ? (
+            <Typography variant="body2" color="text.secondary" sx={{ textAlign: 'center', py: 4 }}>
+              No active issues. All detected emails have been dismissed.
+            </Typography>
+          ) : (
+            <List>
+              {activeIssues.map((issue) => (
+                <Card key={issue.id} sx={{ mb: 1 }}>
+                  <CardContent>
+                    <Box display="flex" justifyContent="space-between" alignItems="center">
+                      <Box>
+                        <Typography variant="body2" color="text.secondary">
+                          Detected Email
+                        </Typography>
+                        <Chip
+                          label={issue.email}
+                          color="warning"
+                          size="small"
+                          sx={{ mt: 1 }}
+                        />
+                      </Box>
+                      <Button
                         size="small"
-                        sx={{ mt: 1 }}
-                      />
+                        variant="outlined"
+                        startIcon={<DeleteIcon />}
+                        onClick={() => handleDismiss(issue.id)}
+                      >
+                        Dismiss
+                      </Button>
                     </Box>
-                    <Button
-                      size="small"
-                      variant="outlined"
-                      startIcon={<DeleteIcon />}
-                    >
-                      Dismiss
-                    </Button>
-                  </Box>
-                  <Typography variant="caption" display="block" sx={{ mt: 1 }}>
-                    {issue.timestamp}
-                  </Typography>
-                </CardContent>
-              </Card>
-            ))}
-          </List>
+                    <Typography variant="caption" display="block" sx={{ mt: 1 }}>
+                      {formatTimestamp(issue.timestamp)}
+                    </Typography>
+                  </CardContent>
+                </Card>
+              ))}
+            </List>
+          )}
         </TabPanel>
 
         <TabPanel value={activeTab} index={1}>
@@ -141,29 +230,48 @@ const App: React.FC = () => {
             Detection History
           </Typography>
           
-          <List>
-            {mockIssues.map((issue) => (
-              <ListItem
-                key={issue.id}
-                secondaryAction={
-                  <IconButton edge="end">
-                    <DeleteIcon />
-                  </IconButton>
-                }
-              >
-                <ListItemText
-                  primary={issue.email}
-                  secondary={issue.timestamp}
-                />
-              </ListItem>
-            ))}
-          </List>
-          
-          <Box sx={{ mt: 2, textAlign: 'center' }}>
-            <Button variant="outlined" color="error">
-              Clear History
-            </Button>
-          </Box>
+          {allIssues.length === 0 ? (
+            <Typography variant="body2" color="text.secondary" sx={{ textAlign: 'center', py: 4 }}>
+              No emails detected yet. Start using ChatGPT!
+            </Typography>
+          ) : (
+            <>
+              <List>
+                {allIssues.map((issue) => (
+                  <ListItem
+                    key={issue.id}
+                    sx={{
+                      bgcolor: issue.dismissed ? 'action.hover' : 'background.paper',
+                      mb: 0.5,
+                      borderRadius: 1
+                    }}
+                  >
+                    <ListItemText
+                      primary={
+                        <Box display="flex" alignItems="center" gap={1}>
+                          <Typography variant="body2">{issue.email}</Typography>
+                          {issue.dismissed && (
+                            <Chip label="Dismissed" size="small" color="default" />
+                          )}
+                        </Box>
+                      }
+                      secondary={formatTimestamp(issue.timestamp)}
+                    />
+                  </ListItem>
+                ))}
+              </List>
+              
+              <Box sx={{ mt: 2, textAlign: 'center' }}>
+                <Button 
+                  variant="outlined" 
+                  color="error"
+                  onClick={handleClearHistory}
+                >
+                  Clear History
+                </Button>
+              </Box>
+            </>
+          )}
         </TabPanel>
       </Box>
     </ThemeProvider>
