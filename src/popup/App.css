@@ -4,39 +4,8 @@
   padding: 0;
 }
 
-.app {
-  width: 400px;
-  min-height: 300px;
-  background: #ffffff;
+body {
+  font-family: 'Roboto', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
-
-.app-header {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: white;
-  padding: 20px;
-  text-align: center;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-}
-
-.app-header h1 {
-  font-size: 20px;
-  font-weight: 600;
-  margin: 0;
-}
-
-.app-content {
-  padding: 30px 20px;
-  text-align: center;
-}
-
-.app-content p {
-  font-size: 16px;
-  color: #333;
-  margin-bottom: 10px;
-}
-
-.app-content .subtitle {
-  font-size: 14px;
-  color: #666;
-}
-
