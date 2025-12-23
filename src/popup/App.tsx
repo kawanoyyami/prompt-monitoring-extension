@@ -64,7 +64,6 @@ const App: React.FC = () => {
     setActiveTab(newValue);
   };
 
-  // Mock data pentru demo
   const mockIssues = [
     { id: 1, email: 'user@example.com', timestamp: new Date().toLocaleString() },
     { id: 2, email: 'test@domain.com', timestamp: new Date().toLocaleString() },

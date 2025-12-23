@@ -3,6 +3,33 @@
   "name": "Prompt Monitoring Extension",
   "version": "1.0.0",
   "description": "Monitors ChatGPT prompts for email addresses",
+  "permissions": ["storage"],
+  "host_permissions": [
+    "https://chat.openai.com/*",
+    "https://chatgpt.com/*"
+  ],
+  "content_scripts": [
+    {
+      "matches": [
+        "https://chat.openai.com/*",
+        "https://chatgpt.com/*"
+      ],
+      "js": ["content-script.js"],
+      "run_at": "document_start"
+    }
+  ],
+  "web_accessible_resources": [
+    {
+      "resources": ["injected-script.js"],
+      "matches": [
+        "https://chat.openai.com/*",
+        "https://chatgpt.com/*"
+      ]
+    }
+  ],
+  "background": {
+    "service_worker": "service-worker.js"
+  },
   "action": {
     "default_popup": "popup.html"
   }

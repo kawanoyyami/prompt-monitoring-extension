@@ -4,7 +4,10 @@ const CopyWebpackPlugin = require('copy-webpack-plugin');
 
 module.exports = {
   entry: {
-    popup: './src/popup/index.tsx'
+    popup: './src/popup/index.tsx',
+    'content-script': './src/content/content-script.ts',
+    'injected-script': './src/content/injected-script.ts',
+    'service-worker': './src/background/service-worker.ts'
   },
   output: {
     path: path.resolve(__dirname, 'dist'),
