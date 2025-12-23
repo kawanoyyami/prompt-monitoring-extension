@@ -8,14 +8,7 @@ import {
   Button,
 } from '@mui/material';
 import { Delete as DeleteIcon } from '@mui/icons-material';
-
-interface EmailIssue {
-  id: string;
-  email: string;
-  timestamp: number;
-  dismissed: boolean;
-  dismissedUntil?: number;
-}
+import type { EmailIssue } from '../../../types';
 
 interface IssuesTabProps {
   issues: EmailIssue[];
@@ -37,8 +30,8 @@ const IssuesTab: React.FC<IssuesTabProps> = ({ issues, onDismiss, onDismissEmail
   const totalDetections = issues.length;
 
   const sortedEmailAddresses = emailAddresses.sort((a, b) => {
-    const latestA = Math.max(...groupedIssues[a].map(i => i.timestamp));
-    const latestB = Math.max(...groupedIssues[b].map(i => i.timestamp));
+    const latestA = Math.max(...groupedIssues[a].map((i: EmailIssue) => i.timestamp));
+    const latestB = Math.max(...groupedIssues[b].map((i: EmailIssue) => i.timestamp));
     return latestB - latestA;
   });
 

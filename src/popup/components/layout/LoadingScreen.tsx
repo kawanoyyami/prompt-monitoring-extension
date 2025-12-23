@@ -1,6 +1,6 @@
 import React from 'react';
 import { Box, CircularProgress, ThemeProvider } from '@mui/material';
-import { theme } from '../theme';
+import { theme } from '../../theme';
 
 const LoadingScreen: React.FC = () => {
   return (

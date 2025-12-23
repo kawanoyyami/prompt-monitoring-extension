@@ -1,44 +1,31 @@
 import browser from 'webextension-polyfill';
-
-console.log('[Content Script] Loaded');
+import { MESSAGE_TYPES } from '../constants';
 
 window.addEventListener('emailDetected', ((event: CustomEvent) => {
-  console.log('[Content Script] Received emailDetected event:', event.detail);
-  
   const { emails, timestamp } = event.detail;
-  
+
   try {
-    browser.runtime.sendMessage(
-      {
-        type: 'EMAIL_DETECTED',
-        emails: emails,
-        timestamp: timestamp
-      }
-    ).then(() => {
-      console.log('[Content Script] Message sent to service worker');
-    }).catch((error) => {
-      console.warn('[Content Script] Extension context invalidated. Please reload the page after updating the extension.');
-    });
+    browser.runtime
+      .sendMessage({
+        type: MESSAGE_TYPES.EMAIL_DETECTED,
+        emails,
+        timestamp,
+      })
+      .catch(() => {
+        console.warn('[Extension] Context invalidated. Please reload the page after updating the extension.');
+      });
   } catch (error) {
-    console.warn('[Content Script] Could not send message. Extension may have been updated.');
+    console.warn('[Extension] Could not send message. Extension may have been updated.');
   }
 }) as EventListener);
-
-console.log('[Content Script] Event listener installed');
 
 function injectScript() {
   const script = document.createElement('script');
   script.src = browser.runtime.getURL('injected-script.js');
-  script.onload = function() {
-    console.log('[Content Script] Injected script loaded successfully');
-    script.remove();
-  };
-  script.onerror = function() {
-    console.error('[Content Script] Error loading injected script');
-  };
-  
+  script.onload = () => script.remove();
+  script.onerror = () => console.error('[Extension] Failed to load monitoring script');
+
   (document.head || document.documentElement).appendChild(script);
-  console.log('[Content Script] Injected script tag into page');
 }
 
 if (document.readyState === 'loading') {

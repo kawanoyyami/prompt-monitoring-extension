@@ -1,13 +1,8 @@
-(function() {
-  console.log('[Injected Script] Starting in MAIN WORLD');
-  
+(function () {
   const EMAIL_REGEX = /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g;
   const originalFetch = window.fetch;
-  let fetchCount = 0;
-  
-  window.fetch = async function(url: RequestInfo | URL, options?: RequestInit): Promise<Response> {
-    fetchCount++;
-    
+
+  window.fetch = async function (url: RequestInfo | URL, options?: RequestInit): Promise<Response> {
     let urlString: string;
     if (typeof url === 'string') {
       urlString = url;
@@ -18,48 +13,35 @@
     } else {
       urlString = String(url);
     }
-    
-      const isImportant = (urlString.includes('backend-api') || urlString.includes('backend-anon')) && urlString.includes('conversation');
-    
-    if (isImportant) {
-      console.log(`[Injected] FETCH #${fetchCount}:`, urlString.substring(0, 150));
-    }
-    
-    if (isImportant) {
-      console.log('[Injected] ChatGPT API detected');
-      
-      let body = options?.body;
-      
-      if (body && typeof body === 'string') {
-        console.log('[Injected] Original body:', body.substring(0, 200));
-        
-        const emails = body.match(EMAIL_REGEX);
-        
-        if (emails && emails.length > 0) {
-          console.log('[Injected] EMAILS DETECTED:', emails);
-          
-          const anonymizedBody = body.replace(EMAIL_REGEX, '[EMAIL_ADDRESS]');
-          console.log('[Injected] Anonymized body:', anonymizedBody.substring(0, 200));
-          
-          window.dispatchEvent(new CustomEvent('emailDetected', {
+
+    const isChatGPTAPI =
+      (urlString.includes('backend-api') || urlString.includes('backend-anon')) &&
+      urlString.includes('conversation');
+
+    if (isChatGPTAPI && options?.body && typeof options.body === 'string') {
+      const emails = options.body.match(EMAIL_REGEX);
+
+      if (emails && emails.length > 0) {
+        console.log('[Prompt Monitor] Email(s) detected:', emails);
+
+        const anonymizedBody = options.body.replace(EMAIL_REGEX, '[EMAIL_ADDRESS]');
+
+        window.dispatchEvent(
+          new CustomEvent('emailDetected', {
             detail: {
-              emails: emails,
-              timestamp: Date.now()
-            }
-          }));
-          
-          console.log('[Injected] Event dispatched to content script');
-          
-          return originalFetch.call(this, url, {
-            ...options,
-            body: anonymizedBody
-          });
-        }
+              emails,
+              timestamp: Date.now(),
+            },
+          })
+        );
+
+        return originalFetch.call(this, url, {
+          ...options,
+          body: anonymizedBody,
+        });
       }
     }
-    
+
     return originalFetch.call(this, url, options);
   };
-  
-  console.log('[Injected Script] Fetch override installed in MAIN WORLD!');
 })();

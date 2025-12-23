@@ -1,13 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import browser from 'webextension-polyfill';
-
-interface EmailIssue {
-  id: string;
-  email: string;
-  timestamp: number;
-  dismissed: boolean;
-  dismissedUntil?: number;
-}
+import type { EmailIssue } from '../../types';
+import { MESSAGE_TYPES } from '../../constants';
 
 interface IssuesContextType {
   issues: EmailIssue[];
@@ -42,7 +36,6 @@ export const IssuesProvider: React.FC<IssuesProviderProps> = ({ children }) => {
 
     const listener = (changes: any, areaName: string) => {
       if (areaName === 'local' && changes.issues) {
-        console.log('[Context] Storage changed, updating issues');
         setIssues(changes.issues.newValue || []);
       }
     };
@@ -55,45 +48,31 @@ export const IssuesProvider: React.FC<IssuesProviderProps> = ({ children }) => {
   }, []);
 
   const loadIssues = () => {
-    console.log('[Context] Loading issues from storage');
     browser.storage.local.get(['issues']).then((result) => {
       const loadedIssues = (result.issues as EmailIssue[]) || [];
-      console.log('[Context] Loaded issues:', loadedIssues.length);
       setIssues(loadedIssues);
       setLoading(false);
     });
   };
 
   const dismissIssue = (issueId: string) => {
-    console.log('[Context] Dismissing issue:', issueId);
     browser.runtime.sendMessage({
-      type: 'DISMISS_ISSUE',
-      issueId: issueId,
-    }).then((response) => {
-      console.log('[Context] Dismiss response:', response);
-      loadIssues();
-    });
+      type: MESSAGE_TYPES.DISMISS_ISSUE,
+      issueId,
+    }).then(() => loadIssues());
   };
 
   const dismissEmail = (email: string) => {
-    console.log('[Context] Dismissing all instances of email:', email);
     browser.runtime.sendMessage({
-      type: 'DISMISS_EMAIL',
-      email: email,
-    }).then((response) => {
-      console.log('[Context] Dismiss email response:', response);
-      loadIssues();
-    });
+      type: MESSAGE_TYPES.DISMISS_EMAIL,
+      email,
+    }).then(() => loadIssues());
   };
 
   const clearHistory = () => {
-    console.log('[Context] Clearing all history');
     browser.runtime.sendMessage({
-      type: 'CLEAR_HISTORY',
-    }).then((response) => {
-      console.log('[Context] Clear history response:', response);
-      loadIssues();
-    });
+      type: MESSAGE_TYPES.CLEAR_HISTORY,
+    }).then(() => loadIssues());
   };
 
   const activeIssues = issues.filter((issue) => !issue.dismissed);
@@ -110,4 +89,3 @@ export const IssuesProvider: React.FC<IssuesProviderProps> = ({ children }) => {
 
   return <IssuesContext.Provider value={value}>{children}</IssuesContext.Provider>;
 };
-

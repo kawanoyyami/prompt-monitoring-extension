@@ -2,13 +2,14 @@ import React, { useState } from 'react';
 import { Box, ThemeProvider } from '@mui/material';
 import { useIssues } from './context/IssuesContext';
 import { theme } from './theme';
-import { formatTimestamp } from './utils/formatters';
-import Header from './components/Header';
-import TabNavigation from './components/TabNavigation';
-import TabPanel from './components/TabPanel';
-import LoadingScreen from './components/LoadingScreen';
-import IssuesTab from './components/IssuesTab';
-import HistoryTab from './components/HistoryTab';
+import { formatTimestamp } from '../utils/formatters';
+import {
+  Header,
+  LoadingScreen,
+  TabNavigation,
+  IssuesTab,
+  HistoryTab,
+} from './components';
 import './App.css';
 
 const App: React.FC = () => {

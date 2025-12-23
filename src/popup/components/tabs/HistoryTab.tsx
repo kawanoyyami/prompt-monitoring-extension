@@ -8,15 +8,8 @@ import {
   Chip,
   Button,
 } from '@mui/material';
-import ConfirmDialog from './ConfirmDialog';
-
-interface EmailIssue {
-  id: string;
-  email: string;
-  timestamp: number;
-  dismissed: boolean;
-  dismissedUntil?: number;
-}
+import { ConfirmDialog } from '../ui';
+import type { EmailIssue } from '../../../types';
 
 interface HistoryTabProps {
   issues: EmailIssue[];

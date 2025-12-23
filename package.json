@@ -4,8 +4,12 @@
   "description": "test",
   "main": "index.js",
   "scripts": {
-    "build": "webpack --mode production",
+    "build": "npm run build:chrome && npm run build:firefox",
+    "build:chrome": "webpack --mode production --env browser=chrome",
+    "build:firefox": "webpack --mode production --env browser=firefox",
     "dev": "webpack --mode development --watch",
+    "dev:chrome": "webpack --mode development --watch --env browser=chrome",
+    "dev:firefox": "webpack --mode development --watch --env browser=firefox",
     "type-check": "tsc --noEmit"
   },
   "author": "",
