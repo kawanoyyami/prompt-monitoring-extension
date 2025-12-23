@@ -6,14 +6,22 @@ window.addEventListener('emailDetected', ((event: CustomEvent) => {
   const { emails, timestamp } = event.detail;
   
   try {
-    chrome.runtime.sendMessage({
-      type: 'EMAIL_DETECTED',
-      emails: emails,
-      timestamp: timestamp
-    });
-    console.log('[Content Script] Message sent to service worker');
+    chrome.runtime.sendMessage(
+      {
+        type: 'EMAIL_DETECTED',
+        emails: emails,
+        timestamp: timestamp
+      },
+      (response) => {
+        if (chrome.runtime.lastError) {
+          console.warn('[Content Script] Extension context invalidated. Please reload the page after updating the extension.');
+          return;
+        }
+        console.log('[Content Script] Message sent to service worker');
+      }
+    );
   } catch (error) {
-    console.error('[Content Script] Error sending message:', error);
+    console.warn('[Content Script] Could not send message. Extension may have been updated.');
   }
 }) as EventListener);
 

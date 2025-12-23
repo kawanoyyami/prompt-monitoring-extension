@@ -14,6 +14,7 @@ interface IssuesContextType {
   activeIssues: EmailIssue[];
   loadIssues: () => void;
   dismissIssue: (issueId: string) => void;
+  dismissEmail: (email: string) => void;
   clearHistory: () => void;
 }
 
@@ -76,6 +77,20 @@ export const IssuesProvider: React.FC<IssuesProviderProps> = ({ children }) => {
     );
   };
 
+  const dismissEmail = (email: string) => {
+    console.log('[Context] Dismissing all instances of email:', email);
+    chrome.runtime.sendMessage(
+      {
+        type: 'DISMISS_EMAIL',
+        email: email,
+      },
+      (response) => {
+        console.log('[Context] Dismiss email response:', response);
+        loadIssues();
+      }
+    );
+  };
+
   const clearHistory = () => {
     console.log('[Context] Clearing all history');
     chrome.runtime.sendMessage(
@@ -97,6 +112,7 @@ export const IssuesProvider: React.FC<IssuesProviderProps> = ({ children }) => {
     activeIssues,
     loadIssues,
     dismissIssue,
+    dismissEmail,
     clearHistory,
   };
 

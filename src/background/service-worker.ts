@@ -16,31 +16,45 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     
     console.log('[Service Worker] Processing emails:', emails);
     
-    chrome.storage.local.get(['issues'], (result) => {
+    chrome.storage.local.get(['issues', 'dismissedEmails'], (result) => {
       const existingIssues: EmailIssue[] = result.issues || [];
+      const dismissedEmails: Record<string, number> = result.dismissedEmails || {};
+      const now = Date.now();
       
       console.log('[Service Worker] Existing issues:', existingIssues.length);
       
+      let hasActiveEmail = false;
+      
       emails.forEach((email: string) => {
+        const dismissedUntil = dismissedEmails[email];
+        const isDismissed = dismissedUntil && dismissedUntil > now;
+        
         const newIssue: EmailIssue = {
           id: `${timestamp}-${Math.random().toString(36).substr(2, 9)}`,
           email: email,
           timestamp: timestamp,
-          dismissed: false
+          dismissed: isDismissed || false,
+          dismissedUntil: isDismissed ? dismissedUntil : undefined
         };
         
+        if (!isDismissed) {
+          hasActiveEmail = true;
+        }
+        
         existingIssues.push(newIssue);
-        console.log('[Service Worker] Added issue:', newIssue);
+        console.log('[Service Worker] Added issue:', newIssue, isDismissed ? '(auto-dismissed)' : '');
       });
       
       chrome.storage.local.set({ issues: existingIssues }, () => {
         console.log('[Service Worker] Issues saved to storage. Total:', existingIssues.length);
         
-        try {
-          chrome.action.openPopup();
-          console.log('[Service Worker] Popup opened');
-        } catch (error) {
-          console.log('[Service Worker] Could not auto-open popup:', error);
+        if (hasActiveEmail) {
+          try {
+            chrome.action.openPopup();
+            console.log('[Service Worker] Popup opened');
+          } catch (error) {
+            console.log('[Service Worker] Could not auto-open popup:', error);
+          }
         }
         
         if (sendResponse) {
@@ -73,6 +87,39 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       
       chrome.storage.local.set({ issues: updatedIssues }, () => {
         console.log('[Service Worker] Issue dismissed:', issueId);
+        if (sendResponse) {
+          sendResponse({ success: true });
+        }
+      });
+    });
+    
+    return true;
+  }
+
+  if (message.type === 'DISMISS_EMAIL') {
+    const { email } = message;
+    
+    console.log('[Service Worker] Dismissing all instances of email:', email);
+    
+    chrome.storage.local.get(['issues', 'dismissedEmails'], (result) => {
+      const issues: EmailIssue[] = result.issues || [];
+      const dismissedEmails: Record<string, number> = result.dismissedEmails || {};
+      
+      dismissedEmails[email] = Date.now() + (24 * 60 * 60 * 1000);
+      
+      const updatedIssues = issues.map(issue => {
+        if (issue.email === email) {
+          return {
+            ...issue,
+            dismissed: true,
+            dismissedUntil: dismissedEmails[email]
+          };
+        }
+        return issue;
+      });
+      
+      chrome.storage.local.set({ issues: updatedIssues, dismissedEmails }, () => {
+        console.log('[Service Worker] All instances of email dismissed:', email);
         if (sendResponse) {
           sendResponse({ success: true });
         }
